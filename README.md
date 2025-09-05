@@ -1,8 +1,6 @@
-# FlashAssessment
+This is a .NET 8 microservice that sanitizes input strings by masking sensitive words, and provides a CRUD API to manage those words in SQL Server. The service is production-ready with validation, observability, caching, resilience, and containerization.
 
-FlashAssessment is a .NET 8 microservice that sanitizes input strings by masking sensitive words, and provides a CRUD API to manage those words in SQL Server. The service is production-ready with validation, observability, caching, resilience, and containerization.
-
-## How this solution was built (architecture & design)
+## Architecture & Design
 
 - Technology choices: .NET 8 Web API (C# 12), SQL Server for storage, Dapper for data access (no Entity Framework), and Swagger for interactive API docs.
 - Project structure (keep things simple and testable):
