@@ -1,0 +1,75 @@
+version: "3.8"
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=${SA_PASSWORD}
+    ports:
+      - "1433:1433"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P $$SA_PASSWORD -C -Q \"SELECT 1\" || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - mssqldata:/var/opt/mssql
+
+  db-init:
+    image: mcr.microsoft.com/mssql-tools:latest
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./db/init:/init:ro
+    entrypoint: /bin/bash -lc "shopt -s nullglob; for f in /init/*.sql; do echo Running $$f; /opt/mssql-tools/bin/sqlcmd -S db -U sa -P $$SA_PASSWORD -C -I -i $$f; done;"
+    environment:
+      - SA_PASSWORD=${SA_PASSWORD}
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+    environment:
+      - ConnectionStrings__Sql=Server=db,1433;Database=FlashAssessment;User Id=sa;Password=${SA_PASSWORD};Encrypt=True;TrustServerCertificate=True;
+      - AUTH_ENABLED=${AUTH_ENABLED}
+      - API_KEY=${API_KEY}
+      # Optional Redis cache for multi-instance regex caching
+      # - Redis__Configuration=redis:6379
+      # - Redis__InstanceName=flash:
+      # Rate limiting overrides (optional):
+      # - RateLimiting__Sanitize__PermitLimit=30
+      # - RateLimiting__Sanitize__WindowSeconds=60
+      # - RateLimiting__WordsRead__PermitLimit=120
+      # - RateLimiting__WordsRead__WindowSeconds=60
+      # - RateLimiting__WordsWrite__PermitLimit=30
+      # - RateLimiting__WordsWrite__WindowSeconds=60
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      db-init:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  tests:
+    build:
+      context: .
+      dockerfile: docker/testrunner.Dockerfile
+    depends_on:
+      - api
+    environment:
+      - ConnectionStrings__Sql=Server=db,1433;Database=FlashAssessment;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=true;
+      # Redis for tests if enabled
+      # - Redis__Configuration=redis:6379
+    command: ["dotnet", "test", "FlashAssessment.sln", "-c", "Release", "--logger:trx"]
+
+volumes:
+  mssqldata:
+
+
