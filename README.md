@@ -1,3 +1,5 @@
+# String Sanitiser
+
 This is a .NET 8 microservice that sanitizes input strings by masking sensitive words, and provides a CRUD API to manage those words in SQL Server. The service is production-ready with validation, observability, caching, resilience, and containerization.
 
 ## Architecture & Design
@@ -10,7 +12,7 @@ This is a .NET 8 microservice that sanitizes input strings by masking sensitive 
   - `src/Infrastructure`: Data access (Dapper), SQL connection factory, resiliency policies
   - `tests`: Unit tests and integration tests
 
-### Design choices in plain language
+### Design choices
 
 - Database access: We talk to SQL Server using Dapper with safe, named parameters. Updates use a "row version" so we don’t overwrite someone else’s changes by accident.
 - Resilience to hiccups: Brief database glitches are retried automatically. If failures keep happening, a “circuit breaker” pauses calls for a short time. We publish metrics so you can see when this occurs.
